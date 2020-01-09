@@ -39,7 +39,9 @@ Install the Flutter and Dart plugins:
 * [Send Data to a New Screen](#send-data-to-a-new-screen)
     * Sending Data Forward
     * Sending Data Backward
-* [Intro to BLoC Pattern](#intro-to-bloc-pattern)
+* [Intro to RxDart + BLoC Pattern](#intro-to-rxdart--bloc-pattern)
+* [Asynchronous Functions](#asynchronous-functions)
+* [Making API Calls](#making-api-calls)
 * [Building a Weather App Using BLoC Pattern](#building-a-weather-app)
 * [Common Pitfalls](#common-pitfalls)
 
@@ -258,3 +260,113 @@ class _DetailsPageState extends State<DetailsPage> {
   }
 }
 ```
+
+## Intro to RxDart + BLoC Pattern
+The information and graphics from this section are from [here](https://www.didierboelens.com/2018/08/reactive-programming---streams---bloc/). Read the article there for a more detailed coverage.
+
+Add ```rxdart: ^0.23.1``` to pubspec.yaml. 
+
+### BLoC Pattern
+BLoC stands for **B**usiness **Lo**gic **C**omponent.
+
+**Advantages**
+1. Decoupled from the UI Layer
+2. Better segmentation of app logic
+3. Makes use of streams for input and output
+
+![](https://www.didierboelens.com/images/streams_bloc.png)
+
+### RxDart
+The pipe is known as a ```Stream```. A stream is controlled with a ```StreamController```. The ```StreamController``` exposes the ```Sink``` for input. There are three types of ```StreamControllers``` - ```PublishSubject```, ```BehaviorSubject```, ```ReplaySubject```.
+
+![](https://www.didierboelens.com/images/S.PublishSubject.png)
+
+![](https://www.didierboelens.com/images/S.BehaviorSubject.png)
+
+![](https://www.didierboelens.com/images/S.ReplaySubject.png)
+
+### Implementation Sample
+Copy the ```blocs``` folder to the ```lib``` folder.
+```dart
+class SampleBloc implements BlocBase {
+  int _counter;
+  
+  // Stream to handle the counter
+  Final _counterController = BehaviorSubject<int>();
+  Sink<int> get inAdd => _counterController.sink;
+  Stream<int> get outCounter => _counterController.stream;
+
+  // Constructor
+  SampleBloc() {
+    _counter = 0;
+    _counterController.stream.listen(_handleLogic);
+  }
+
+  @override
+  void dispose() {
+    _counterController.close();
+  }
+
+  void _handleLogic(data) {
+    ...
+  }
+}
+```
+
+## Asynchronous Functions
+A ```Future``` represents the result of an asynchronous operation, and can have two states: uncompleted or completed.
+
+The ```async``` keyword appears before a function body to mark that function as asynchronous.
+
+The ```await``` keyword can appear before an asynchronous function to get the completed result.
+
+```dart
+Future<String>  createOrderMessage() async {
+  var order = await fetchUserOrder();
+  return 'Your order is: $order';
+}
+```
+
+## Making API Calls
+Add ```dio: ^3.0.8``` to pubspec.yaml.
+```dart
+Future<String> fetchWeatherForecast() async {
+    String weatherApiUrl =
+        "https://api.data.gov.sg/v1/environment/2-hour-weather-forecast";
+    String forecast;
+    Dio dio = Dio();
+
+    RequestOptions requestOptions = RequestOptions(
+        receiveTimeout: 5000,
+        connectTimeout: 5000,
+        method: 'GET',
+        responseType: ResponseType.json,
+        validateStatus: (status) {
+          return status == 200;
+        });
+
+    (dio.httpClientAdapter as DefaultHttpClientAdapter).onHttpClientCreate =
+        (HttpClient client) {
+      client.badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+      return client;
+    };
+
+    dio.interceptors.add(InterceptorsWrapper(onResponse: (Response response) {
+      if (response.statusCode == 200) {
+        var forecasts = response.data["items"][0]["forecasts"];
+        forecast = items.where((map) => map["area"] == "Clementi")[0]["forecast"];
+      }
+      return response;
+    }));
+
+    try {
+      await dio.get(weatherApiUrl, options: requestOptions);
+    } catch (e) {
+      _handleError(e);
+      return List();
+    }
+
+    return forecast;
+  }
+  ```
