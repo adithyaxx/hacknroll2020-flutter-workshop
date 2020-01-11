@@ -22,6 +22,15 @@ Install the Flutter and Dart plugins:
 * Type “install”, and select Extensions: Install Extensions.
 * Type “flutter” in the extensions search field, select Flutter in the list, and click Install. This also installs the required Dart plugin.
 
+### 3. Android/iOS Development Dependencies
+Running ```flutter doctor -v``` should now produce an output and this image shows a section of that output.
+
+![](https://i.imgur.com/Qa5e1X2.png)
+
+Depending on whether you are developing on an iOS device/simulator or android device/AVD or both, follow the instruction given in the output if there are any. If you have set up everything correctly you should see a [] for Android Studio or Xcode, again depending on whether you are developing on iOS or android or both.
+
+![](https://i.imgur.com/HA68HLu.png)
+
 ## Agenda
 * [Dart Basics](#dart-basics)
     * Built-in types
