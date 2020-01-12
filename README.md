@@ -25,11 +25,11 @@ Install the Flutter and Dart plugins:
 ### 3. Android/iOS Development Dependencies
 Running ```flutter doctor -v``` should now produce an output and this image shows a section of that output.
 
-![](https://i.imgur.com/Qa5e1X2.png)
+<img src="https://i.imgur.com/Qa5e1X2.png" width=720 />
 
-Depending on whether you are developing on an iOS device/simulator or android device/AVD or both, follow the instruction given in the output if there are any. If you have set up everything correctly you should see a [] for Android Studio or Xcode, again depending on whether you are developing on iOS or android or both.
+Depending on whether you are developing on an iOS device/simulator or android device/AVD or both, follow the instruction given in the output if there are any. If you have set up everything correctly you should see a [✓] for Android Studio or Xcode, again depending on whether you are developing on iOS or android or both.
 
-![](https://i.imgur.com/HA68HLu.png)
+<img src="https://i.imgur.com/HA68HLu.png" width=720 />
 
 ## Agenda
 * [Dart Basics](#dart-basics)
@@ -42,6 +42,7 @@ Depending on whether you are developing on an iOS device/simulator or android de
     * Create an App
 * [Building an Infinite List](#building-an-infinite-list) 
 * [Adding Interactivity](#adding-interactivity)
+* [Asynchronous Functions](#asynchronous-functions)
 * [Navigation](#navigation)
     * Pushing a Route
     * Popping the Stack
@@ -49,10 +50,8 @@ Depending on whether you are developing on an iOS device/simulator or android de
     * Sending Data Forward
     * Sending Data Backward
 * [Intro to RxDart + BLoC Pattern](#intro-to-rxdart--bloc-pattern)
-* [Asynchronous Functions](#asynchronous-functions)
 * [Making API Calls](#making-api-calls)
 * [Building a Weather App Using BLoC Pattern](#building-a-weather-app)
-* [Common Pitfalls](#common-pitfalls)
 
 ## Dart Basics
 Read up on all the syntax [here](!https://dart.dev/guides/language/language-tour).
@@ -103,16 +102,16 @@ int sum(int a, int b, int c) {
 sum(1, 2, 3);
 ```
 
-**Optional Positional Parameters**
+**Optional Named Parameters**
 ```dart
-int sum(int a, int b, {int c = 0}) {
+int sum({int a, int b, int c = 0}) {
   return a + b + c;
 }
 
 sum(a: 1, b: 2);
 ```
 
-**Optional Named Parameters**
+**Optional Positional Parameters**
 ```dart
 int sum(int a, int b, [int c = 0]) {
   return a + b + c;
@@ -158,6 +157,10 @@ $ flutter create -i swift -a kotlin list_app
 ```
 
 ## Building an Infinite List
+We will be building an app like this:
+
+<img src="https://i.imgur.com/VNecD3p.png" height=512 />
+
 ```dart
 ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -189,6 +192,20 @@ setState(() {
       values.putIfAbsent(i, () => true);
   });
 ``` 
+
+## Asynchronous Functions
+A ```Future``` represents the result of an asynchronous operation, and can have two states: uncompleted or completed.
+
+The ```async``` keyword appears before a function body to mark that function as asynchronous.
+
+The ```await``` keyword can appear before an asynchronous function to get the completed result.
+
+```dart
+Future<String>  createOrderMessage() async {
+  var order = await fetchUserOrder();
+  return 'Your order is: $order';
+}
+```
 
 ## Navigation
 ![](https://dpzbhybb2pdcj.cloudfront.net/windmill/v-9/Figures/navigator_push_pop.png)
@@ -233,7 +250,11 @@ class _DetailsPageState extends State<DetailsPage> {
 
 ### Sending Data Backward
 **Using Navigator**
-```data
+```dart
+var data = await Navigator.push(context, MaterialPageRoute(builder: (context) => NewPage()));
+```
+
+```dart
 Navigator.pop(context, widget.index);
 ```
 
@@ -322,20 +343,6 @@ class SampleBloc implements BlocBase {
 }
 ```
 
-## Asynchronous Functions
-A ```Future``` represents the result of an asynchronous operation, and can have two states: uncompleted or completed.
-
-The ```async``` keyword appears before a function body to mark that function as asynchronous.
-
-The ```await``` keyword can appear before an asynchronous function to get the completed result.
-
-```dart
-Future<String>  createOrderMessage() async {
-  var order = await fetchUserOrder();
-  return 'Your order is: $order';
-}
-```
-
 ## Making API Calls
 Add ```dio: ^3.0.8``` to pubspec.yaml.
 ```dart
@@ -363,8 +370,10 @@ Future<String> fetchWeatherForecast() async {
 
     dio.interceptors.add(InterceptorsWrapper(onResponse: (Response response) {
       if (response.statusCode == 200) {
-        var forecasts = response.data["items"][0]["forecasts"];
-        forecast = items.where((map) => map["area"] == "Clementi")[0]["forecast"];
+        for (Map map in response.data["items"][0]["forecasts"]) {
+          if (map["area"] == "Clementi") 
+            forecast = map["forecast"];
+        }
       }
       return response;
     }));
@@ -372,10 +381,72 @@ Future<String> fetchWeatherForecast() async {
     try {
       await dio.get(weatherApiUrl, options: requestOptions);
     } catch (e) {
-      _handleError(e);
-      return List();
+      print(e);
+      return "Error";
     }
 
     return forecast;
   }
   ```
+
+## Building a Weather App Using BLoC Pattern
+We will be building a very simple UI like this:
+
+<img src="https://i.imgur.com/KIoslq3.png" height=512 />
+
+Add these dependencies:
+```dart
+rxdart: ^0.23.1
+dio: ^3.0.8
+flutter_spinkit: "^4.1.1"
+```
+
+Use this method to display weather icons according to the forecast data:
+```dart
+_getIcon(String val) {
+  switch (val) {
+    case 'Cloudy':
+      return WeatherIcons.cloudy;
+    case 'Fair (Day)':
+      return WeatherIcons.day_sunny;
+    case 'Fair (Night)':
+      return WeatherIcons.night_clear;
+    case 'Fair & Warm':
+      return WeatherIcons.day_sunny_overcast;
+    case 'Hazy':
+      return WeatherIcons.smoke;
+    case 'Heavy Rain':
+      return WeatherIcons.rain_wind;
+    case 'Heavy Showers':
+      return WeatherIcons.showers;
+    case 'Heavy Thundery Showers':
+      return WeatherIcons.thunderstorm;
+    case 'Heavy Thundery Showers with Gusty Winds':
+      return WeatherIcons.thunderstorm;
+    case 'Light Rain':
+      return WeatherIcons.sprinkle;
+    case 'Light Showers':
+      return WeatherIcons.showers;
+    case 'Mist':
+      return WeatherIcons.fog;
+    case 'Moderate Rain':
+      return WeatherIcons.rain;
+    case 'Partly Cloudy (Day)':
+      return WeatherIcons.day_cloudy;
+    case 'Partly Cloudy (Night)':
+      return WeatherIcons.night_alt_cloudy;
+    case 'Passing Showers':
+      return WeatherIcons.showers;
+    case 'Showers':
+      return WeatherIcons.showers;
+    case 'Slightly Hazy':
+      return WeatherIcons.smoke;
+    case 'Thundery Showers':
+      return WeatherIcons.storm_showers;
+    case 'Windy':
+      return WeatherIcons.cloudy_windy;
+  }
+
+  return WeatherIcons.cloudy;
+}
+```
